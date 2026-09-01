@@ -1,0 +1,68 @@
+name: Release TrimBin
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    name: Build & Release (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    permissions:
+      contents: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            name: macos-latest
+          - os: windows-latest
+            name: windows-latest
+          - os: ubuntu-latest
+            name: linux-latest
+
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Linux System Dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libfuse2 libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Install Root Dependencies
+        run: npm install
+
+      - name: Install Frontend Dependencies
+        run: cd frontend && npm install && cd ..
+
+      - name: Build & Package Desktop Bundles
+        run: |
+          npm run build
+          node scripts/generate-dmg-background.js || true
+          npx electron-builder --publish never
+
+      - name: Publish Release Artifacts
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view "${{ github.ref_name }}" || gh release create "${{ github.ref_name }}" --title "TrimBin ${{ github.ref_name }}" --notes "Release ${{ github.ref_name }}" || true
+          for f in release/*.dmg release/*.exe release/*.AppImage release/*-arm64-mac.zip release/*.tar.gz; do
+            if [ -f "$f" ]; then
+              echo "Uploading $f..."
+              gh release upload "${{ github.ref_name }}" "$f" --clobber
+            fi
+          done

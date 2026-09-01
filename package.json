@@ -1,21 +1,133 @@
 {
-  "name": "auto-editor-gui",
+  "name": "trimbin",
+  "productName": "TrimBin",
   "version": "1.0.0",
-  "description": "<p align=\"center\"><img src=\"https://auto-editor.com/img/auto-editor-banner.webp\" title=\"Auto-Editor\" width=\"700\"></p>",
+  "description": "Tactile, professional silence removal and speech rough-cutting GUI powered by auto-editor & Whisper.",
+  "author": {
+    "name": "Cri-Lab-code",
+    "email": "contact@trimbin.app"
+  },
   "main": "dist/main.js",
-  "directories": {
-    "doc": "docs"
-  },
   "scripts": {
-    "start": "node create-folder.js && npm run build && electron .",
-    "build": "tsc"
+    "build:main": "tsc",
+    "build:renderer": "cd frontend && npm run build && cd ..",
+    "build": "tsc && cd frontend && npm run build && cd ..",
+    "package": "tsc && cd frontend && npm run build && cd .. && node build-app.js",
+    "start": "tsc && cd frontend && bun run build && cd .. && electron .",
+    "dist": "tsc && cd frontend && npm run build && cd .. && electron-builder",
+    "dist:mac": "tsc && cd frontend && npm run build && cd .. && electron-builder --mac",
+    "dist:win": "tsc && cd frontend && npm run build && cd .. && electron-builder --win",
+    "dist:linux": "tsc && cd frontend && npm run build && cd .. && electron-builder --linux"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "build": {
+    "appId": "com.cristianopopa.trimbin",
+    "productName": "TrimBin",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**/*",
+      "frontend/dist/renderer/**/*",
+      "package.json",
+      "icon.png",
+      "transcribe_helper.py",
+      "build/icon.icns",
+      "build/icon.png",
+      "build/dmg-background.png"
+    ],
+    "mac": {
+      "icon": "build/icon.icns",
+      "category": "public.app-category.video",
+      "target": [
+        "dmg",
+        "pkg",
+        "zip"
+      ],
+      "gatekeeperAssess": false,
+      "hardenedRuntime": false,
+      "artifactName": "TrimBin-${version}-${arch}-${os}.${ext}"
+    },
+    "dmg": {
+      "title": "${productName} ${version}",
+      "background": "build/dmg-background.png",
+      "iconSize": 120,
+      "window": {
+        "width": 660,
+        "height": 400
+      },
+      "contents": [
+        {
+          "x": 175,
+          "y": 195,
+          "type": "file"
+        },
+        {
+          "x": 485,
+          "y": 195,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    },
+    "win": {
+      "icon": "icon.png",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "linux": {
+      "icon": "icon.png",
+      "target": [
+        "AppImage",
+        "tar.gz"
+      ],
+      "category": "AudioVideoEditing",
+      "synopsis": "Analog hardware-inspired video silence trimmer",
+      "description": "High-fidelity analog NLE interface for fast silence detection and cutting.",
+      "executableName": "trimbin",
+      "maintainer": "contact@trimbin.app",
+      "artifactName": "TrimBin-${version}.${ext}"
+    },
+    "extraResources": [
+      "transcribe_helper.py"
+    ],
+    "asarUnpack": [
+      "transcribe_helper.py"
+    ]
+  },
+  "keywords": [
+    "video-editor",
+    "silence-removal",
+    "auto-editor",
+    "whisper",
+    "rough-cut",
+    "nle",
+    "transcription"
+  ],
+  "license": "MIT",
   "devDependencies": {
+    "@electron/packager": "^20.3.0",
     "@types/electron": "^1.6.10",
     "electron": "^33.0.1",
+    "electron-builder": "^26.15.3",
     "typescript": "^5.6.3"
   }
 }

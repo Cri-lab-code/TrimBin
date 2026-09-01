@@ -1,100 +1,440 @@
+@import url('https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-@layer base {
-  /* :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 240 5.9% 10%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 240 10% 3.9%;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-    --radius: 0.5rem
-  } */
-  .dark, :root {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 5.9% 10%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 85.7% 97.3%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 240 4.9% 83.9%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
-    --radius: 0.5rem;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 240 4.9% 83.9%;
-  }
-}
 
-/* Add to your CSS */
-.alert {
-  display: flex;
-  align-items: center;
-  padding: 10px;
-  border-radius: 8px;
-}
+:root {
+  /* Surface Layers (90° Top-Down Physical Studio Chassis) */
+  --bg-chassis: #101114;
+  --bg-panel: #15171d;
+  --bg-panel-sub: #1a1c24;
+  --bg-panel-hover: #1f222c;
+  --bg-inset: #090a0d;
+  --bg-inset-sub: #0d0e13;
 
-.close-btn {
-  margin-left: 10px;
-  background: transparent;
-  border: none;
-  font-size: 18px;
-  cursor: pointer;
-}
+  /* Aliases for backward compatibility */
+  --chassis-base: var(--bg-chassis);
+  --panel-surface: var(--bg-panel);
+  --panel-surface-sub: var(--bg-panel-sub);
+  --well-inset: var(--bg-inset);
 
-.close-btn:hover {
-  opacity: 20%
-}
+  /* Structural Lighting & Seams */
+  --border-subtle: #1c1f28;
+  --border-default: #262934;
+  --border-highlight: rgba(255, 255, 255, 0.12);
+  --border-shadow: rgba(0, 0, 0, 0.95);
+  --seam-line: #060708;
 
+  /* Aliases for backward compatibility */
+  --rim-highlight: var(--border-highlight);
+  --rim-shadow: var(--border-shadow);
+
+  /* Illumination & Glow */
+  --amber-lamp: #f59e0b;
+  --amber-lamp-glow: rgba(245, 158, 11, 0.45);
+  --green-lamp: #10b981;
+  --red-lamp: #ef4444;
+
+  /* Typography / Text Colors */
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --text-engraved: #9ca3af;
+  --text-accent: #f59e0b;
+  --text-accent-bright: #fef08a;
+
+  /* Status and Accents */
+  --accent-amber-subtle: rgba(245, 158, 11, 0.15);
+  --accent-amber-border: rgba(245, 158, 11, 0.45);
+  --accent-emerald-subtle: rgba(16, 185, 129, 0.15);
+  --accent-rose-subtle: rgba(239, 68, 68, 0.15);
+
+  /* Analog Warm-Backlit VU Meter Tokens (Audiophile Tube/LED Backlight) */
+  --vu-backlight-top: #ffbe3b;
+  --vu-backlight-mid: #f59e0b;
+  --vu-backlight-bottom: #b45309;
+  --vu-backlight-deep: #78350f;
+  --vu-backlight-glow: rgba(245, 158, 11, 0.45);
+  --vu-bezel-outer: #1e2129;
+  --vu-bezel-inner: #0a0b0e;
+  --vu-bezel-highlight: rgba(255, 255, 255, 0.16);
+  --vu-bezel-shadow: rgba(0, 0, 0, 0.95);
+  --vu-glass-sheen: rgba(255, 255, 255, 0.14);
+  --vu-scale-ink: #2b1404;
+  --vu-scale-ink-subtle: #612d0a;
+  --vu-scale-red: #b91c1c;
+  --vu-scale-red-bright: #dc2626;
+  --vu-needle-body: #1c0e04;
+  --vu-needle-tip: #b91c1c;
+  --vu-needle-pivot: #180c04;
+  --vu-needle-pivot-rim: #612d0a;
+  --vu-rivet: #475569;
+
+  /* Component Semantic Tokens (Zero Arbitrary RGB) */
+  --halo-amber: radial-gradient(circle at 50% 50%, rgba(245, 158, 11, 0.35) 0%, rgba(217, 119, 6, 0.12) 50%, transparent 75%);
+  --modal-border: var(--border-default);
+  --modal-shadow: 0 16px 40px rgba(0, 0, 0, 0.95);
+  --glow-amber: 0 0 10px rgba(245, 158, 11, 0.5);
+  --glow-amber-subtle: 0 0 8px rgba(245, 158, 11, 0.3);
+  --glow-rose: 0 0 10px rgba(244, 63, 94, 0.6);
+  --segment-active-bg: linear-gradient(90deg, rgba(245, 158, 11, 0.22) 0%, rgba(245, 158, 11, 0.10) 50%, rgba(245, 158, 11, 0.22) 100%);
+  --segment-active-border: var(--accent-amber-border);
+  --segment-idle-bg: var(--bg-panel-sub);
+  --segment-idle-hover: var(--bg-panel-hover);
+
+  /* Physical Studio Hardware & Film Sprocket Tokens */
+  --sprocket-hole: #040406;
+  --sprocket-border: #1a0c06;
+  --film-leader-border: #451f0b;
+  --film-leader-bg: #140b05;
+  --film-placeholder-deep: #070402;
+  --film-gutter: #080503;
+  --film-well: #0a0705;
+  --film-perforation-amber: #fbbf24;
+
+  /* Tactile Controls & Timeline Deck Tokens */
+  --btn-tactile-bg: #1c1d22;
+  --btn-tactile-hover: #25272e;
+  --btn-tactile-divider: #2a2c33;
+  --border-panel-groove: #24262c;
+  --timeline-track-header: #16171b;
+  --timeline-track-lane: #111215;
+  --timeline-track-label: #d8cfbe;
+  --timeline-readout-bg: #0a0b0d;
+
+  /* Timeline Canvas Analog Palette */
+  --timeline-film-base: #06080d;
+  --timeline-clip-active: #f59e0b;
+  --timeline-clip-top: #c25e2e;
+  --timeline-clip-mid: #a44c24;
+  --timeline-clip-bot: #8f3a14;
+  --timeline-clip-deep: #6e2b0e;
+  --timeline-waveform-hi: #93c5fd;
+  --timeline-waveform-mid: #3b82f6;
+  --timeline-waveform-lo: #1d4ed8;
+  --timeline-ruler-top: #181c26;
+  --timeline-ruler-bot: #0e111a;
+  --timeline-ruler-tick: #475569;
+  --timeline-ruler-subtick: #3b4760;
+  --timeline-ruler-text: #cbd5e1;
+  --text-silkscreen: #d1b88a;
+  --text-silkscreen-bright: #f0e6d2;
+  --knob-cap-top: #3a3e48;
+  --knob-cap-mid: #24272f;
+  --knob-cap-bot: #16171c;
+  --knob-rim: #4d5360;
+  --terminal-screen: #030406;
+}
 
 @layer base {
   * {
-    @apply border-border;
+    box-sizing: border-box;
   }
 
-  body {
-    @apply bg-background text-foreground;
-    @apply font-sans;
-    
+  html,
+  body,
+  #root {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: var(--bg-chassis);
+    color: var(--text-secondary);
+    font-family: 'Barlow', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--bg-inset);
+    box-shadow: inset 0 1px 2px var(--border-shadow);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border-default);
+    border: 1px solid var(--border-subtle);
+    border-radius: 2px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #383d4c;
+  }
+}
+
+@layer components {
+  /* Semantic Panel Surface */
+  .panel-surface {
+    background-color: var(--bg-panel);
+    border: 1px solid var(--border-default);
+    border-top: 1px solid var(--border-highlight);
+    border-bottom: 2px solid var(--border-shadow);
+    border-radius: 3px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.7);
+  }
+
+  .panel-inset {
+    background-color: var(--bg-inset);
+    border: 1px solid var(--border-subtle);
+    box-shadow: inset 0 2px 4px var(--border-shadow), 0 1px 0 var(--border-highlight);
+    border-radius: 2px;
+  }
+
+  .panel-inset-sub {
+    background-color: var(--bg-inset-sub);
+    border: 1px solid var(--border-subtle);
+    box-shadow: inset 0 1.5px 3px rgba(0, 0, 0, 0.85);
+    border-radius: 2px;
+  }
+
+  .chip-badge {
+    background-color: var(--bg-inset);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+    border-radius: 3px;
+  }
+
+  .chip-badge-accent {
+    background-color: var(--accent-amber-subtle);
+    border: 1px solid var(--accent-amber-border);
+    color: var(--text-accent-bright);
+    border-radius: 2px;
+  }
+
+  /* Tactile Hardware Keycaps */
+  .btn-tactile {
+    height: 26px;
+    padding: 0 9px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-secondary);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95);
+    background: linear-gradient(180deg, #242730 0%, #15171d 100%);
+    border: 1px solid var(--border-default);
+    border-top: 1px solid var(--border-highlight);
+    border-bottom: 2px solid var(--border-shadow);
+    border-radius: 2px;
+    box-shadow: 0 1.5px 3px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.08s ease;
+  }
+
+  .btn-tactile:hover:not(:disabled) {
+    background: linear-gradient(180deg, #2b2f3a 0%, #1a1c24 100%);
+    color: #ffffff;
+    border-top-color: rgba(255, 255, 255, 0.25);
+  }
+
+  .btn-tactile:active:not(:disabled) {
+    transform: translateY(1px);
+    background: linear-gradient(180deg, #0e1014 0%, #161820 100%);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.9);
+  }
+
+  .btn-tactile.active,
+  .btn-tactile.is-active {
+    border-top-color: var(--amber-lamp);
+    color: var(--text-accent-bright);
+    text-shadow: 0 0 6px var(--amber-lamp-glow);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.9), 0 0 8px var(--amber-lamp-glow);
+  }
+
+    /* Master Action Push-Switch (Heavy Tactile Studio Actuator) */
+  .btn-actuator {
+    height: 36px;
+    padding: 0 16px;
+    width: 100%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Barlow', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-accent-bright);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
+    background: linear-gradient(180deg, #2c303c 0%, #1c1f28 50%, #13151b 100%);
+    border: 1px solid #2f3442;
+    border-top: 1px solid rgba(255, 255, 255, 0.28);
+    border-bottom: 2px solid #08090c;
+    border-radius: 3px;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.08s ease;
+  }
+
+  .btn-actuator:hover:not(:disabled) {
+    background: linear-gradient(180deg, #373c4b 0%, #232733 50%, #181b23 100%);
+    border-top-color: rgba(255, 255, 255, 0.45);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.85), 0 0 12px rgba(245, 158, 11, 0.35);
+    color: #ffffff;
+  }
+
+  .btn-actuator:active:not(:disabled),
+  .btn-actuator.is-active {
+    transform: translateY(1px);
+    background: linear-gradient(180deg, #12141a 0%, #1e170d 60%, #291d0e 100%);
+    border-color: rgba(245, 158, 11, 0.5);
+    border-top-color: rgba(245, 158, 11, 0.7);
+    box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.95), 0 0 10px rgba(245, 158, 11, 0.4);
+    color: #fbbf24;
+  }
+
+  /* 4-Gang Keybank Switch */
+  .keybank-4gang {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    background: var(--bg-inset);
+    padding: 2px;
+    gap: 2px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 3px;
+    box-shadow: inset 0 2px 4px var(--border-shadow);
+  }
+
+  .keybank-btn {
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Barlow', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-secondary);
+    background: linear-gradient(180deg, #20222a 0%, #13141a 100%);
+    border: 1px solid var(--border-subtle);
+    border-radius: 2px;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.08s ease;
+  }
+
+  .keybank-btn:hover {
+    color: #ffffff;
+    background: linear-gradient(180deg, #282b35 0%, #191a22 100%);
+  }
+
+  .keybank-btn.is-active {
+    background: var(--accent-amber-subtle);
+    border-color: var(--accent-amber-border);
+    color: var(--text-accent-bright);
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.8), 0 0 6px var(--amber-lamp-glow);
+  }
+
+  /* LED Status Lamps */
+  .led-amber {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--amber-lamp);
+    box-shadow: 0 0 6px var(--amber-lamp-glow), inset 0 1px 1px rgba(255, 255, 255, 0.8);
+  }
+
+  .led-green {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--green-lamp);
+    box-shadow: 0 0 6px rgba(16, 185, 129, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.8);
+  }
+
+  .led-red {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--red-lamp);
+    box-shadow: 0 0 6px rgba(239, 68, 68, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.8);
+  }
+
+  /* Backward Compatibility Aliases */
+  .console-panel { @apply panel-surface; }
+  .console-inset-well { @apply panel-inset; }
+  .console-btn-tactile { @apply btn-tactile; }
+  .console-btn-actuator { @apply btn-actuator; }
+  .skeuo-well-dark { @apply panel-inset; }
+}
+
+@layer utilities {
+  .shadow-panel-bevel {
+    box-shadow: 0 2px 4px var(--rim-shadow), inset 0 1px 0 var(--rim-highlight);
+  }
+  .shadow-inset-well {
+    box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.92), 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+  .shadow-inset-deep {
+    box-shadow: inset 0 3px 10px rgba(0, 0, 0, 0.98);
+  }
+  .shadow-tactile-press {
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.95);
+  }
+  .shadow-amber-bloom {
+    box-shadow: 0 0 10px var(--amber-lamp-glow);
+  }
+  .shadow-modal-elevation {
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.95);
+  }
+  .shadow-playhead-cap {
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.9), 0 2px 4px rgba(0, 0, 0, 0.9);
+  }
+  .shadow-laser-glow {
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.9);
+  }
+  .shadow-sprocket-hole {
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  }
+  .shadow-sprocket-edge {
+    box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.9);
+  }
+  .shadow-knurled-cap {
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.9), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+  }
+  .shadow-knurled-base {
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.8), inset 0 1px 2px rgba(255, 255, 255, 0.08);
+  }
+  .shadow-vu-chassis {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.85), inset 0 2px 4px rgba(0, 0, 0, 0.95);
+  }
+  .shadow-disc-vinyl {
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.98);
+  }
+  .shadow-audio-deck {
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.98);
+  }
+  .shadow-track-header {
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.4);
+  }
+  .shadow-track-groove {
+    box-shadow: inset 0 3px 10px rgba(0, 0, 0, 0.9), inset 0 -3px 10px rgba(0, 0, 0, 0.9);
+  }
+  .shadow-badge-amber {
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.6);
+  }
+  .shadow-badge-cyan {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.7);
+  }
+    .shadow-glow-amber {
+    box-shadow: var(--glow-amber);
+  }
+  .shadow-glow-amber-subtle {
+    box-shadow: var(--glow-amber-subtle);
+  }
+  .shadow-glow-rose {
+    box-shadow: var(--glow-rose);
+  }
+  .drop-shadow-subtle {
+    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.9));
   }
 }

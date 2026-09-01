@@ -12,7 +12,6 @@ __pycache__/
 node_modules
 
 # Build Files
-build/
 dist/
 *.egg-info/
 
@@ -22,3 +21,8 @@ dist/
 # Import/output Folder (Local imports/exports, not for version control)
 import/
 output/
+release/
+scratch/
+*.rrdata
+preload.js
+dist-packager/
