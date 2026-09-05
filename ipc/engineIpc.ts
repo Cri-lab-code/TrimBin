@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import {
   findAutoEditorBinary,
+  findAutoEditorBinaryAsync,
   checkAllDependencies,
   loadEnginePaths,
   saveEnginePaths,
@@ -19,7 +20,7 @@ export interface EngineIpcOptions {
 
 export function registerEngineIpc({ getMainWindow, getDefaultOutputDir }: EngineIpcOptions): void {
   ipcMain.handle('get-auto-editor-info', async (_event, forceRefresh?: boolean): Promise<AutoEditorInfo> => {
-    return findAutoEditorBinary(forceRefresh);
+    return await findAutoEditorBinaryAsync(forceRefresh);
   });
 
   ipcMain.handle('check-dependencies', async (_event, forceRefresh?: boolean): Promise<DependencyStatus> => {

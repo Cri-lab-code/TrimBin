@@ -1,7 +1,7 @@
 import path from 'path';
 
 /**
- * Robust cross-platform path sanitizer and normalizer.
+ * Robust cross-platform path sanitizer and normalizer for Node.js main process.
  * Handles Windows drive letters (C:, F:), leading slashes (/F:/ -> F:/),
  * URL encodings (%20), custom media protocols, and file:// URLs.
  */
@@ -15,7 +15,9 @@ export function normalizePathForSystem(inputPath?: string): string {
       const idx = clean.indexOf('?path=');
       const qVal = clean.substring(idx + 6);
       clean = qVal.split('&')[0];
-    } catch {}
+    } catch (e) {
+      console.debug('[pathUtils] Query path extraction notice:', e);
+    }
   }
 
   // Remove protocol prefixes
@@ -34,7 +36,9 @@ export function normalizePathForSystem(inputPath?: string): string {
   // Safe URI decoding (handles %20 for spaces, etc.)
   try {
     clean = decodeURIComponent(clean);
-  } catch {}
+  } catch (e) {
+    console.debug('[pathUtils] URI decode notice for input:', clean, e);
+  }
 
   // Fix Windows drive letter formatting:
   // e.g. "/F:/OBS nuovo/..." or "\F:\OBS nuovo\..." -> "F:/OBS nuovo/..."
@@ -57,4 +61,3 @@ export function normalizePathForSystem(inputPath?: string): string {
 
   return clean;
 }
-

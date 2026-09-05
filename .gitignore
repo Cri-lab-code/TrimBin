@@ -1,28 +1,114 @@
-# Auto-Editor Generated Files
+# Dependencies
+node_modules/
+frontend/node_modules/
+.pnp
+.pnp.js
+
+# Build Outputs
+dist/
+dist-packager/
+release/
+frontend/dist/
+*.egg-info/
+*.tsbuildinfo
+preload.js
+
+# Package & Binary Artifacts
+*.dmg
+*.pkg
+*.zip
+*.exe
+*.AppImage
+*.tar.gz
+*.blockmap
+*.app/
+*.app
+builder-debug.yml
+builder-effective-config.yaml
+latest*.yml
+
+# Auto-Editor & NLE Generated Files
+# Media & Test Files
+*.mp4
+*.mov
+*.mkv
+*.avi
+*.webm
+*.wav
+*.mp3
+*.aac
+*.m4a
+*.flac
+*.ogg
+*.opus
+!resources/**
+!assets/**
+
 example_ALTERED.mp4
 *https*
 config.pal
+*.rrdata
 
-# Python Generated Files
-__pycache__/
-*.pyc
-*.pyo
-*.spec
-
-node_modules
-
-# Build Files
-dist/
-*.egg-info/
-
-# OS Files
-.DS_Store
-
-# Import/output Folder (Local imports/exports, not for version control)
+# Local Input / Output / Working Directories
 import/
 output/
-release/
 scratch/
-*.rrdata
-preload.js
-dist-packager/
+temp/
+tmp/
+
+# Python Generated Files & Environments
+__pycache__/
+*.py[cod]
+*.class
+*.spec
+.pytest_cache/
+.venv/
+venv/
+env/
+ENV/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment Variables & Secrets
+.env
+.env.local
+.env.*.local
+.env.development
+.env.test
+.env.production
+
+# Editor & IDE Directories
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*~
+
+# OS Metadata & Filesystem Artifacts
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+.fseventsd
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+[Dd]esktop.ini
+$RECYCLE.BIN/

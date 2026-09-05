@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import {
   SelectedFile,
   AutoEditorInfo,
@@ -9,39 +9,19 @@ import { useTimelineStore } from '../hooks/useTimelineStore';
 import { usePlaybackEngine } from '../hooks/usePlaybackEngine';
 import { useExportWorkflow } from '../hooks/useExportWorkflow';
 import { useAppHotkeys } from '../hooks/useAppHotkeys';
+import { useCutAnalysis } from '../hooks/useCutAnalysis';
+import { useSystemIpcListeners } from '../hooks/useSystemIpcListeners';
+import { useFileDropzone } from '../hooks/useFileDropzone';
 import { SilenceSettings, DEFAULT_SILENCE_SETTINGS } from '../types/timeline';
-import { convertCutsToSilenceSlices } from '../utils/timelineEngine';
-import { calibrateAudioSilence } from '../utils/audioCalibration';
 import { TrimBinHeader } from './trimbin/TrimBinHeader';
+import { TrimBinAlertBanner } from './trimbin/TrimBinAlertBanner';
 import { TrimBinVideoStage } from './trimbin/TrimBinVideoStage';
 import { TrimBinSidebar } from './trimbin/TrimBinSidebar';
 import { TrimBinTimeline } from './trimbin/TrimBinTimeline';
 import { TrimBinConsoleDrawer } from './trimbin/TrimBinConsoleDrawer';
 import { AboutModal } from './trimbin/AboutModal';
 import { DependencyModal } from './trimbin/DependencyModal';
-import {
-  CheckCircle2,
-  AlertCircle,
-  ExternalLink,
-  FolderOpen,
-} from 'lucide-react';
-
-const sanitizeFilePath = (p: string): string => {
-  if (!p) return '';
-  let clean = p.trim();
-  if (clean.includes('?path=')) {
-    try {
-      const idx = clean.indexOf('?path=');
-      clean = clean.substring(idx + 6).split('&')[0];
-    } catch {}
-  }
-  clean = clean.replace(/^(?:file|media):\/\/(?:local\/)?/, '');
-  try {
-    clean = decodeURIComponent(clean);
-  } catch {}
-  clean = clean.replace(/^[/\\]+([a-zA-Z]:)/, '$1');
-  return clean;
-};
+import { sanitizeFilePath } from '../utils/pathSanitizer';
 
 export const Layout: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<SelectedFile | null>(null);
@@ -148,10 +128,27 @@ export const Layout: React.FC = () => {
     jumpPrevCut,
   });
 
-  // UI state
-  const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
-  const [analysisProgress, setAnalysisProgress] = useState<number>(0);
-  const [isCalibrating, setIsCalibrating] = useState<boolean>(false);
+  // Cut Analysis & Audio Calibration
+  const {
+    isAnalyzing,
+    analysisProgress,
+    setAnalysisProgress,
+    isCalibrating,
+    handleAnalyzeCuts,
+    handleAutoCalibrateThreshold,
+  } = useCutAnalysis({
+    selectedFile,
+    sourceDuration,
+    silenceSettings,
+    setSilenceSettings,
+    setFps,
+    setInitialSilenceAnalysis,
+    setSilenceAnalysis,
+    setSmartSkipOn,
+    videoRef,
+    setSourceCurrentTime,
+    setAlert,
+  });
 
   // Transcription state
   const [transcriptSegments, setTranscriptSegments] = useState<TranscriptSegment[]>([]);
@@ -170,12 +167,9 @@ export const Layout: React.FC = () => {
   const [autoEditorInfo, setAutoEditorInfo] = useState<AutoEditorInfo | null>(null);
   const [dependencyStatus, setDependencyStatus] = useState<DependencyStatus | null>(null);
   const [showDependencyModal, setShowDependencyModal] = useState<boolean>(false);
-  const [logs, setLogs] = useState<string[]>([]);
-  const [progress, setProgress] = useState<number>(0);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [isConsoleOpen, setIsConsoleOpen] = useState<boolean>(false);
   const [isAboutOpen, setIsAboutOpen] = useState<boolean>(false);
-  const [isDragging, setIsDragging] = useState<boolean>(false);
 
   const refreshDependencies = useCallback(async () => {
     try {
@@ -197,171 +191,11 @@ export const Layout: React.FC = () => {
     }
   }, []);
 
-  useEffect(() => {
-    let isMounted = true;
-
-    const initSystem = async () => {
-      try {
-        if (window.electron) {
-          await refreshDependencies();
-          const defaultFolder = await window.electron.getAppDataPath();
-          if (isMounted && defaultFolder) {
-            setExportPath(defaultFolder);
-          }
-        }
-      } catch (err) {
-        console.error('System init error:', err);
-      }
-    };
-
-    initSystem();
-
-    let unsubOutput: (() => void) | undefined;
-    let unsubProg: (() => void) | undefined;
-    let unsubPrevProg: (() => void) | undefined;
-
-    if (window.electron?.onCommandOutput) {
-      unsubOutput = window.electron.onCommandOutput((chunk) => {
-        if (isMounted) setLogs((prev) => [...prev, chunk]);
-      });
-    }
-
-    if (window.electron?.onCommandProgress) {
-      unsubProg = window.electron.onCommandProgress((prog) => {
-        if (isMounted) setProgress(prog);
-      });
-    }
-
-    if (window.electron?.onPreviewProgress) {
-      unsubPrevProg = window.electron.onPreviewProgress((prog) => {
-        if (isMounted) setAnalysisProgress(prog);
-      });
-    }
-
-    return () => {
-      isMounted = false;
-      if (unsubOutput) unsubOutput();
-      if (unsubProg) unsubProg();
-      if (unsubPrevProg) unsubPrevProg();
-    };
-  }, [refreshDependencies, setExportPath]);
-
-  const handleAnalyzeCuts = useCallback(
-    async (isInitialBaseline: boolean = false, overrideFilePath?: string) => {
-      const targetPath = overrideFilePath || selectedFile?.path;
-      if (!targetPath) return;
-
-      setIsAnalyzing(true);
-      setAnalysisProgress(10);
-
-      try {
-        const res = await window.electron.analyzeCuts({
-          inputFile: targetPath,
-          duration: sourceDuration,
-          ...silenceSettings,
-          loudness: silenceSettings.threshold,
-          margin: silenceSettings.paddingLeft,
-        });
-
-        if (res.success && res.timeline) {
-          setFps(res.timeline.fps || 30);
-          const dur = sourceDuration > 0 ? sourceDuration : res.timeline.originalDuration;
-
-          const slices = convertCutsToSilenceSlices(res.timeline.silenceCuts, dur);
-          if (isInitialBaseline) {
-            setInitialSilenceAnalysis(slices);
-          } else {
-            setSilenceAnalysis(slices);
-          }
-          setSmartSkipOn(true);
-
-          if (res.timeline.segments.length > 0 && videoRef.current) {
-            const firstIn = res.timeline.segments[0].inSec;
-            videoRef.current.currentTime = firstIn;
-            setSourceCurrentTime(firstIn);
-          }
-        }
-      } catch (err: unknown) {
-        console.error('Analyze cuts error:', err);
-        setAlert({
-          message: (err instanceof Error ? err.message : 'Cut analysis failed.'),
-          type: 'error',
-        });
-      } finally {
-        setIsAnalyzing(false);
-      }
-    },
-    [selectedFile, silenceSettings, sourceDuration, setSilenceAnalysis, setInitialSilenceAnalysis, setFps, setSmartSkipOn, setSourceCurrentTime, setAlert]
-  );
-
-  const handleAutoCalibrateThreshold = useCallback(
-    async (filePathToCalibrate?: string, isInitialBaseline: boolean = false) => {
-      const targetPath = filePathToCalibrate || selectedFile?.path;
-      if (!targetPath) return;
-
-      setIsCalibrating(true);
-      await new Promise((resolve) => setTimeout(resolve, 25));
-
-      try {
-        const calibration = await calibrateAudioSilence(targetPath);
-        const roundedDb = typeof calibration === 'object' ? calibration.db : Math.round(calibration);
-
-        const newSettings = {
-          ...silenceSettings,
-          threshold: roundedDb,
-          isAutoThreshold: true,
-        };
-        setSilenceSettings(newSettings);
-
-        setIsAnalyzing(true);
-        setAnalysisProgress(15);
-
-        try {
-          const res = await window.electron.analyzeCuts({
-            inputFile: targetPath,
-            duration: sourceDuration,
-            ...newSettings,
-            loudness: roundedDb,
-            margin: newSettings.paddingLeft,
-          });
-
-          if (res.success && res.timeline) {
-            setFps(res.timeline.fps || 30);
-            const dur = sourceDuration > 0 ? sourceDuration : res.timeline.originalDuration;
-            const slices = convertCutsToSilenceSlices(res.timeline.silenceCuts, dur);
-
-            if (isInitialBaseline) {
-              setInitialSilenceAnalysis(slices);
-            } else {
-              setSilenceAnalysis(slices);
-            }
-            setSmartSkipOn(true);
-
-            if (res.timeline.segments.length > 0 && videoRef.current) {
-              const firstIn = res.timeline.segments[0].inSec;
-              videoRef.current.currentTime = firstIn;
-              setSourceCurrentTime(firstIn);
-            }
-          }
-        } catch (err: unknown) {
-          console.error('Analyze cuts error after auto-calibration:', err);
-          setAlert({
-            message: (err instanceof Error ? err.message : 'Silence re-analysis failed after auto-calibration.'),
-            type: 'error',
-          });
-        } finally {
-          setIsAnalyzing(false);
-        }
-      } catch (err) {
-        console.error('Auto-calibration error:', err);
-      } finally {
-        setTimeout(() => {
-          setIsCalibrating(false);
-        }, 150);
-      }
-    },
-    [selectedFile, silenceSettings, sourceDuration, setSilenceAnalysis, setInitialSilenceAnalysis, setFps, setSmartSkipOn, setSourceCurrentTime, setAlert]
-  );
+  const { logs, setLogs, progress, setProgress } = useSystemIpcListeners({
+    refreshDependencies,
+    setExportPath,
+    setAnalysisProgress,
+  });
 
   const loadMediaFile = useCallback(
     async (filePath: string, fileName?: string) => {
@@ -410,8 +244,22 @@ export const Layout: React.FC = () => {
         }
       }
     },
-    [resetTimeline, initTimeline, silenceSettings.isAutoThreshold, handleAutoCalibrateThreshold, handleAnalyzeCuts, setSourceCurrentTime, setTimelineCurrentTime, setIsPlaying, setAlert]
+    [
+      resetTimeline,
+      initTimeline,
+      silenceSettings.isAutoThreshold,
+      handleAutoCalibrateThreshold,
+      handleAnalyzeCuts,
+      setSourceCurrentTime,
+      setTimelineCurrentTime,
+      setIsPlaying,
+      setAlert,
+    ]
   );
+
+  const { isDragging, handleDragOver, handleDragLeave, handleDrop } = useFileDropzone({
+    onFileDrop: loadMediaFile,
+  });
 
   const handleBrowseFile = async () => {
     try {
@@ -421,30 +269,6 @@ export const Layout: React.FC = () => {
       }
     } catch (err) {
       console.error('File dialog error:', err);
-    }
-  };
-
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-  };
-
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const file = e.dataTransfer.files[0];
-      const filePath = (file as File & { path?: string }).path || file.name;
-      loadMediaFile(filePath, file.name);
     }
   };
 
@@ -475,7 +299,14 @@ export const Layout: React.FC = () => {
         }
       }
     },
-    [selectedFile, clips.length, initTimeline, silenceSettings.isAutoThreshold, handleAutoCalibrateThreshold, handleAnalyzeCuts]
+    [
+      selectedFile,
+      clips.length,
+      initTimeline,
+      silenceSettings.isAutoThreshold,
+      handleAutoCalibrateThreshold,
+      handleAnalyzeCuts,
+    ]
   );
 
   const handleExportAsChange = (format: string) => {
@@ -523,65 +354,11 @@ export const Layout: React.FC = () => {
       )}
 
       {/* Alert Notification Toast Banner */}
-      {alert && !isProcessing && (
-        <div
-          className={`mx-2 my-1.5 px-3.5 py-2 rounded-[6px] flex items-center justify-between z-40 text-xs font-mono font-bold shadow-panel-bevel border ${
-            alert.type === 'error'
-              ? 'bg-gradient-to-b from-red-900 via-red-800 to-red-950 text-red-100 border-red-500'
-              : 'bg-gradient-to-b from-emerald-900 via-emerald-800 to-emerald-950 text-emerald-100 border-emerald-500'
-          }`}
-        >
-          <div className="flex items-center gap-2 truncate mr-2">
-            {alert.type === 'error' ? (
-              <AlertCircle className="w-4 h-4 text-red-400 shrink-0" strokeWidth={2.4} />
-            ) : (
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" strokeWidth={2.4} />
-            )}
-            <span className="truncate font-extrabold text-white">
-              {alert.message}
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5 shrink-0">
-            {alert.filePath && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (window.electron && alert.filePath) {
-                      window.electron.openPath(alert.filePath);
-                    }
-                  }}
-                  className="px-2.5 py-1 text-[10px] font-mono font-black text-amber-200 bg-[var(--accent-amber-subtle)] border border-[var(--accent-amber-border)] rounded-[4px] hover:text-white flex items-center gap-1 cursor-pointer"
-                  title="Open directly in default application (DaVinci, Final Cut, Premiere)"
-                >
-                  <ExternalLink className="w-3.5 h-3.5 text-amber-400" strokeWidth={2.4} />
-                  OPEN IN APPLICATION
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (window.electron && alert.filePath) {
-                      window.electron.showItemInFolder(alert.filePath);
-                    }
-                  }}
-                  className="px-2.5 py-1 text-[10px] font-mono font-black text-slate-200 bg-[var(--bg-panel-sub)] border border-[var(--border-default)] rounded-[4px] hover:text-white flex items-center gap-1 cursor-pointer"
-                  title="Reveal file in Finder"
-                >
-                  <FolderOpen className="w-3.5 h-3.5 text-slate-400" strokeWidth={2.4} />
-                  REVEAL IN FINDER
-                </button>
-              </>
-            )}
-            <button
-              type="button"
-              onClick={() => setAlert(null)}
-              className="px-2.5 py-1 text-[10px] font-mono font-bold text-slate-300 bg-[var(--bg-panel)] border border-[var(--border-default)] rounded-[4px] hover:text-white cursor-pointer"
-            >
-              DISMISS
-            </button>
-          </div>
-        </div>
-      )}
+      <TrimBinAlertBanner
+        alert={alert}
+        isProcessing={isProcessing}
+        onDismiss={() => setAlert(null)}
+      />
 
       {/* 2. Top Stage Area (Light Table Viewport + Inspector Audio Rack) */}
       <div className="flex-1 flex overflow-hidden min-h-0 bg-[var(--bg-chassis)] panel-groove">

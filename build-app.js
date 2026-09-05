@@ -4,7 +4,7 @@ const { execSync } = require('child_process');
 const fs = require('fs');
 
 const APP_NAME = 'TrimBin';
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.0.1';
 
 const PACKAGER_CONFIG = {
   dir: '.',
@@ -143,6 +143,7 @@ async function bundle() {
     const appPath = appPaths[0];
 
     injectIcons(appPath);
+    execSync(`codesign --force --deep --sign - "${path.join(appPath, `${APP_NAME}.app`)}"`);
 
     const releaseDir = path.join(__dirname, 'release');
     fs.mkdirSync(releaseDir, { recursive: true });

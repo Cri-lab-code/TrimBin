@@ -5,12 +5,50 @@ import crypto from 'crypto';
 import { spawn, execFile } from 'child_process';
 import { checkFFmpeg, getAugmentedEnv, loadEnginePaths } from './binaryFinder';
 import { normalizePathForSystem } from './pathUtils';
+import {
+  ensureTempDir,
+  getTrackedTempPath,
+  deleteTempFile,
+  deleteTempFileSync,
+} from './tempFileManager';
 
-export const PROXY_DIR = path.join(os.tmpdir(), 'trimbin_proxies');
-if (!fs.existsSync(PROXY_DIR)) {
-  try {
-    fs.mkdirSync(PROXY_DIR, { recursive: true });
-  } catch {}
+export const PROXY_DIR = ensureTempDir('trimbin_proxies');
+
+export async function safeAtomicRename(src: string, dest: string, maxRetries = 5): Promise<void> {
+  let delay = 100;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      await fs.promises.rename(src, dest);
+      return;
+    } catch (err: any) {
+      const isLockError = err?.code === 'EBUSY' || err?.code === 'EPERM' || err?.code === 'EACCES';
+      const isCrossDevice = err?.code === 'EXDEV';
+
+      if (isCrossDevice) {
+        await fs.promises.copyFile(src, dest);
+        await fs.promises.unlink(src).catch(() => {});
+        return;
+      }
+
+      if (isLockError && attempt < maxRetries) {
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        delay *= 2;
+        continue;
+      }
+
+      if (attempt === maxRetries) {
+        try {
+          await fs.promises.copyFile(src, dest);
+          await fs.promises.unlink(src).catch(() => {});
+          return;
+        } catch {
+          throw err;
+        }
+      }
+
+      throw err;
+    }
+  }
 }
 
 export interface FfprobeStream {
@@ -169,16 +207,11 @@ export async function ensureMediaPreviewProxy(
     }
 
     const jobPromise = (async () => {
+      const tempPath = getTrackedTempPath('proxy_tmp', 'mp4', 'trimbin_proxies');
       try {
-        const tempPath = `${proxyPath}.${Date.now()}.${Math.random().toString(36).slice(2)}.tmp.mp4`;
         const env = getAugmentedEnv();
         const ffmpegStatus = await checkFFmpeg(loadEnginePaths().ffmpegPath);
         const ffmpegBin = ffmpegStatus.available && ffmpegStatus.path ? ffmpegStatus.path : 'ffmpeg';
-        if (!fs.existsSync(PROXY_DIR)) {
-          try {
-            fs.mkdirSync(PROXY_DIR, { recursive: true });
-          } catch {}
-        }
 
         const canStreamCopyVideo = ['h264', 'avc1', 'hevc', 'h265', 'av1', 'vp9'].includes(vCodec);
 
@@ -197,15 +230,13 @@ export async function ensureMediaPreviewProxy(
 
           if (remuxResult.code === 0 && fs.existsSync(tempPath) && fs.statSync(tempPath).size > 1024) {
             try {
-              fs.renameSync(tempPath, proxyPath);
+              await safeAtomicRename(tempPath, proxyPath);
               return { playbackPath: proxyPath, isProxy: true };
             } catch (rErr) {
               console.warn('[Auto-Proxy] Remux rename error:', rErr);
             }
           }
-          try {
-            if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
-          } catch {}
+          await deleteTempFile(tempPath);
         }
 
         const transcodeResult = await runFfmpegCommand([
@@ -225,7 +256,7 @@ export async function ensureMediaPreviewProxy(
 
         if (transcodeResult.code === 0 && fs.existsSync(tempPath) && fs.statSync(tempPath).size > 1024) {
           try {
-            fs.renameSync(tempPath, proxyPath);
+            await safeAtomicRename(tempPath, proxyPath);
             return { playbackPath: proxyPath, isProxy: true };
           } catch (rErr) {
             console.error('[Auto-Proxy] Rename error:', rErr);
@@ -234,6 +265,7 @@ export async function ensureMediaPreviewProxy(
       } catch (err) {
         console.warn('[Auto-Proxy] Error during proxy job:', err);
       } finally {
+        await deleteTempFile(tempPath);
         pendingProxyJobs.delete(proxyPath);
       }
 
@@ -259,14 +291,7 @@ export async function sanitizeAudioForAutoEditor(rawFilePath: string): Promise<{
     return { targetPath: filePath, isTemp: false };
   }
 
-  const tempDir = path.join(os.tmpdir(), 'auto_editor_gui_previews');
-  if (!fs.existsSync(tempDir)) {
-    fs.mkdirSync(tempDir, { recursive: true });
-  }
-
-  const baseName = path.basename(filePath, ext);
-  const cleanM4aPath = path.join(tempDir, `clean_audio_${Date.now()}_${baseName}.m4a`);
-  const cleanWavPath = path.join(tempDir, `clean_audio_${Date.now()}_${baseName}.wav`);
+  const cleanM4aPath = getTrackedTempPath('clean_audio', 'm4a', 'trimbin_previews');
 
   // Fast AAC audio copy attempt
   const aacResult = await runFfmpegCommand([
@@ -281,6 +306,10 @@ export async function sanitizeAudioForAutoEditor(rawFilePath: string): Promise<{
   if (aacResult.code === 0 && fs.existsSync(cleanM4aPath) && fs.statSync(cleanM4aPath).size > 1024) {
     return { targetPath: cleanM4aPath, isTemp: true };
   }
+
+  // If AAC copy failed, clean up cleanM4aPath and try PCM WAV
+  deleteTempFileSync(cleanM4aPath);
+  const cleanWavPath = getTrackedTempPath('clean_audio', 'wav', 'trimbin_previews');
 
   // Fallback to PCM WAV if copy fails
   const wavResult = await runFfmpegCommand([
@@ -297,6 +326,7 @@ export async function sanitizeAudioForAutoEditor(rawFilePath: string): Promise<{
     return { targetPath: cleanWavPath, isTemp: true };
   }
 
+  deleteTempFileSync(cleanWavPath);
   return { targetPath: filePath, isTemp: false };
 }
 

@@ -1,7 +1,7 @@
 {
   "name": "trimbin",
   "productName": "TrimBin",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Tactile, professional silence removal and speech rough-cutting GUI powered by auto-editor & Whisper.",
   "author": {
     "name": "Cri-Lab-code",

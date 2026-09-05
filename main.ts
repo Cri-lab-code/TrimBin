@@ -6,6 +6,7 @@ import { registerMediaIpc } from './ipc/mediaIpc';
 import { registerEngineIpc } from './ipc/engineIpc';
 import { registerExportIpc } from './ipc/exportIpc';
 import { registerMediaProtocol } from './ipc/mediaProtocol';
+import { initTempFileManagerHooks, cleanupStaleTempFiles, cleanupAllTrackedTempFiles } from './tempFileManager';
 
 // Hardware acceleration & decoder flags
 app.commandLine.appendSwitch('enable-features', 'PlatformHEVCDecoderSupport');
@@ -225,7 +226,7 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       devTools: false,
-      webSecurity: false,
+      webSecurity: true,
     },
   };
 
@@ -337,6 +338,8 @@ registerExportIpc({
 
 // App Lifecycle
 app.whenReady().then(() => {
+  initTempFileManagerHooks();
+  cleanupStaleTempFiles();
   registerMediaProtocol();
   getDefaultOutputDirectory();
   createWindow();
@@ -346,6 +349,10 @@ app.whenReady().then(() => {
       createWindow();
     }
   });
+});
+
+app.on('will-quit', () => {
+  cleanupAllTrackedTempFiles();
 });
 
 app.on('window-all-closed', () => {

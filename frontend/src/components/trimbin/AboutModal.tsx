@@ -54,7 +54,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
         <div className="p-3 space-y-2.5 bg-[var(--bg-inset)]">
           <div className="p-2 rounded-[3px] text-center space-y-1 border border-[var(--border-subtle)] bg-[var(--bg-inset-sub)]">
             <div className="inline-flex items-center px-2 py-0.5 rounded-[2px] text-[9.5px] font-mono font-bold tracking-wider text-amber-300 bg-amber-950/40 border border-amber-500/40">
-              TRIMBIN v1.0.0
+              TRIMBIN v1.0.1
             </div>
             <p className="text-[11px] text-slate-300 leading-tight font-sans">
               Tactile, professional silence removal and speech rough-cutting GUI.

@@ -2,6 +2,12 @@
 
 All notable changes to TrimBin will be documented in this file.
 
+## [1.0.1] - 2026-09-05
+### Changed
+- Modularized frontend components, layout state, and transcription management.
+- Improved binary detection, environment path discovery, and automated temp file management.
+- Enhanced cross-platform support for Windows and macOS environments.
+
 ## [1.0.0] - 2026-09-01
 ### Added
 - Initial launch release of TrimBin tactile silence removal & speech rough-cutter.

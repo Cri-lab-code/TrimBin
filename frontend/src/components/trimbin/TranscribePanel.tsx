@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback, Component, ErrorInfo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
   Mic,
   Search,
@@ -7,55 +7,15 @@ import {
   Check,
   Loader2,
   FileText,
-  Clock,
-  SlidersHorizontal,
   Trash2,
   FileAudio,
-  AlertTriangle,
 } from 'lucide-react';
 import { TranscriptSegment, TranscribeProgressData } from '@/global';
+import { formatTimestamp, buildSrtContent, buildVttContent } from '@/utils/subtitleParsers';
+import { TranscribeErrorBoundary } from './transcribe/TranscribeErrorBoundary';
+import { TranscriptSegmentRow } from './transcribe/TranscriptSegmentRow';
 
-class TranscribeErrorBoundary extends Component<
-  { children: React.ReactNode },
-  { hasError: boolean; error: Error | null }
-> {
-  constructor(props: { children: React.ReactNode }) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
-
-  static getDerivedStateFromError(error: Error) {
-    return { hasError: true, error };
-  }
-
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('TranscribePanel ErrorBoundary caught error:', error, errorInfo);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="p-4 text-center space-y-3 skeuo-well-dark rounded-[6px] m-1 border border-red-500/50">
-          <AlertTriangle className="w-8 h-8 text-amber-400 mx-auto" />
-          <p className="text-red-400 text-xs font-mono font-bold uppercase">TRANSCRIPT MODULE RECOVERED</p>
-          <p className="text-slate-400 text-[10px] font-mono">
-            {this.state.error?.message || 'A rendering exception occurred in the transcription panel.'}
-          </p>
-          <button
-            type="button"
-            onClick={() => this.setState({ hasError: false, error: null })}
-            className="skeuo-btn-cyan px-3 py-1.5 text-xs font-bold font-mono rounded uppercase cursor-pointer"
-          >
-            RELOAD TRANSCRIPT PANEL
-          </button>
-        </div>
-      );
-    }
-    return this.props.children;
-  }
-}
-
-interface TranscribePanelProps {
+export interface TranscribePanelProps {
   selectedFile: { name: string; path: string } | null;
   currentTime: number;
   duration: number;
@@ -72,95 +32,6 @@ interface TranscribePanelProps {
   onTranscriptProgressChange: (prog: number) => void;
   onResetTranscript: () => void;
 }
-
-const formatTimestamp = (seconds?: number): string => {
-  if (seconds === undefined || isNaN(seconds) || seconds < 0) return '00:00.0';
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60);
-  const ms = Math.floor((seconds % 1) * 10);
-  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms}`;
-};
-
-const formatSrtTime = (seconds?: number): string => {
-  if (seconds === undefined || isNaN(seconds) || seconds < 0) return '00:00:00,000';
-  const hrs = Math.floor(seconds / 3600);
-  const mins = Math.floor((seconds % 3600) / 60);
-  const secs = Math.floor(seconds % 60);
-  const ms = Math.floor((seconds % 1) * 1000);
-  return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs
-    .toString()
-    .padStart(2, '0')},${ms.toString().padStart(3, '0')}`;
-};
-
-const formatVttTime = (seconds?: number): string => {
-  if (seconds === undefined || isNaN(seconds) || seconds < 0) return '00:00:00.000';
-  const hrs = Math.floor(seconds / 3600);
-  const mins = Math.floor((seconds % 3600) / 60);
-  const secs = Math.floor(seconds % 60);
-  const ms = Math.floor((seconds % 1) * 1000);
-  return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs
-    .toString()
-    .padStart(2, '0')}.${ms.toString().padStart(3, '0')}`;
-};
-
-const buildSrtContent = (segments: TranscriptSegment[]): string => {
-  if (!Array.isArray(segments)) return '';
-  return segments
-    .filter(Boolean)
-    .map((seg, idx) => {
-      return `${idx + 1}\n${formatSrtTime(seg.start)} --> ${formatSrtTime(seg.end)}\n${seg.text || ''}\n`;
-    })
-    .join('\n');
-};
-
-const buildVttContent = (segments: TranscriptSegment[]): string => {
-  if (!Array.isArray(segments)) return 'WEBVTT\n\n';
-  const header = 'WEBVTT\n\n';
-  const body = segments
-    .filter(Boolean)
-    .map((seg, idx) => {
-      return `${idx + 1}\n${formatVttTime(seg.start)} --> ${formatVttTime(seg.end)}\n${seg.text || ''}\n`;
-    })
-    .join('\n');
-  return header + body;
-};
-
-interface TranscriptSegmentRowProps {
-  seg: TranscriptSegment;
-  isCurrent: boolean;
-  onSeekToTime: (timeSec: number) => void;
-  activeRef?: React.Ref<HTMLDivElement>;
-}
-
-const TranscriptSegmentRow: React.FC<TranscriptSegmentRowProps> = React.memo(
-  ({ seg, isCurrent, onSeekToTime, activeRef }) => {
-    return (
-      <div
-        ref={activeRef}
-        onClick={() => onSeekToTime(seg.start || 0)}
-        style={{ contentVisibility: 'auto', containIntrinsicSize: '40px' }}
-        className={`p-2 rounded-[4px] text-xs cursor-pointer transition-all border ${
-          isCurrent
-            ? 'bg-[var(--segment-active-bg)] border-[var(--segment-active-border)] text-[var(--text-accent-bright)] shadow-sm'
-            : 'bg-[var(--segment-idle-bg)] hover:bg-[var(--segment-idle-hover)] border-[var(--border-default)] text-[var(--text-primary)] shadow-sm'
-        }`}
-      >
-        <div className="flex items-center justify-between mb-1">
-          <span className="font-mono text-[9px] text-amber-400 font-black flex items-center gap-1">
-            <Clock className="w-2.5 h-2.5" strokeWidth={2.4} />
-            [{formatTimestamp(seg.start)} → {formatTimestamp(seg.end)}]
-          </span>
-          {isCurrent && (
-            <span className="text-[8px] bg-gradient-to-r from-amber-400 to-amber-500 text-black px-1.5 rounded-[2px] font-mono font-black uppercase shadow-sm">
-              ACTIVE
-            </span>
-          )}
-        </div>
-        <p className="leading-snug text-slate-100 font-sans">{seg.text || ''}</p>
-      </div>
-    );
-  }
-);
 
 const TranscribePanelInternal: React.FC<TranscribePanelProps> = ({
   selectedFile,

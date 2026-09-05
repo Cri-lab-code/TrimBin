@@ -39,6 +39,8 @@ export interface RunCommandOptions {
   openWhenDone?: boolean;
   customArgs?: string[];
   rawArgs?: string[];
+  cutRanges?: { start: number; end: number }[];
+  duration?: number;
 }
 
 export interface CommandResult {

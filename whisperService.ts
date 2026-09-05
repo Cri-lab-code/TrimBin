@@ -2,8 +2,15 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { spawn } from 'child_process';
-import { app } from 'electron';
-import { findWhisperPythonBinary, getAugmentedEnv } from './binaryFinder';
+import { findWhisperPythonBinaryAsync, getAugmentedEnv } from './binaryFinder';
+import { getTrackedTempPath, deleteTempFile, registerTempFile } from './tempFileManager';
+
+let appInstance: { getAppPath?: () => string } | null = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const electron: any = require('electron');
+  appInstance = electron?.app || electron?.default?.app || null;
+} catch {}
 
 export interface TranscribeProgressData {
   progress: number;
@@ -53,22 +60,14 @@ export async function transcribeAudioWithWhisper(
     step: 'extracting',
   });
 
-  const pythonBin = findWhisperPythonBinary();
-  if (!pythonBin) {
+  const pythonBin = await findWhisperPythonBinaryAsync();
+  if (!pythonBin || (path.isAbsolute(pythonBin) && !fs.existsSync(pythonBin))) {
     throw new Error('Python 3 executable not found for Whisper AI. Run Auto-Setup in settings.');
   }
 
   const env = getAugmentedEnv();
-  const tempTranscribeDir = path.join(os.tmpdir(), 'trimbin_transcriptions');
-  if (!fs.existsSync(tempTranscribeDir)) {
-    fs.mkdirSync(tempTranscribeDir, { recursive: true });
-  }
-
-  const resultJsonPath = path.join(
-    tempTranscribeDir,
-    `transcript_${Date.now()}_${Math.random().toString(36).slice(2)}.json`
-  );
-
+  const resultJsonPath = getTrackedTempPath('transcript', 'json', 'trimbin_transcriptions');
+  const tempTranscribeDir = path.dirname(resultJsonPath);
   const diskHelperPath = path.join(tempTranscribeDir, 'transcribe_helper.py');
 
   const possibleScriptPaths = [
@@ -78,8 +77,8 @@ export async function transcribeAudioWithWhisper(
     path.join(__dirname, '..', 'transcribe_helper.py'),
   ];
   try {
-    if (app && typeof app.getAppPath === 'function') {
-      possibleScriptPaths.push(path.join(app.getAppPath(), 'transcribe_helper.py'));
+    if (appInstance && typeof appInstance.getAppPath === 'function') {
+      possibleScriptPaths.push(path.join(appInstance.getAppPath(), 'transcribe_helper.py'));
     }
   } catch {}
 
@@ -90,9 +89,10 @@ export async function transcribeAudioWithWhisper(
     if (asarCandidate) {
       try {
         fs.writeFileSync(diskHelperPath, fs.readFileSync(asarCandidate, 'utf-8'), 'utf-8');
+        registerTempFile(diskHelperPath);
         helperPath = diskHelperPath;
       } catch (err) {
-        console.warn('Could not extract transcribe_helper.py from bundle:', err);
+        console.warn('[whisperService] Could not extract transcribe_helper.py from bundle:', err);
       }
     }
   }
@@ -102,6 +102,7 @@ export async function transcribeAudioWithWhisper(
     if (fs.existsSync(rootHelper)) {
       try {
         fs.writeFileSync(diskHelperPath, fs.readFileSync(rootHelper, 'utf-8'), 'utf-8');
+        registerTempFile(diskHelperPath);
         helperPath = diskHelperPath;
       } catch {}
     }
@@ -117,7 +118,7 @@ export async function transcribeAudioWithWhisper(
     const child = spawn(
       pythonBin,
       [scriptPath, '--input', inputFile, '--model', model, '--language', language, '--output', resultJsonPath],
-      { env }
+      { env, windowsHide: true }
     );
 
     let jsonPayload: WhisperTranscribeResult | null = null;
@@ -143,7 +144,9 @@ export async function transcribeAudioWithWhisper(
           if (fs.existsSync(filePath)) {
             try {
               jsonPayload = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-            } catch {}
+            } catch (e) {
+              console.debug('[whisperService] Result file parse error:', e);
+            }
           }
         }
       }
@@ -153,16 +156,23 @@ export async function transcribeAudioWithWhisper(
       stderrBuffer += d.toString();
     });
 
-    child.on('error', (err: Error) => {
-      console.error('Whisper runtime error:', err);
+    child.on('error', async (err: Error) => {
+      await deleteTempFile(resultJsonPath);
+      console.error('[whisperService] Whisper runtime error:', err);
       reject(err);
     });
 
-    child.on('close', (code: number | null) => {
-      if (!jsonPayload && fs.existsSync(resultJsonPath)) {
-        try {
-          jsonPayload = JSON.parse(fs.readFileSync(resultJsonPath, 'utf-8'));
-        } catch {}
+    child.on('close', async (code: number | null) => {
+      try {
+        if (!jsonPayload && fs.existsSync(resultJsonPath)) {
+          try {
+            jsonPayload = JSON.parse(fs.readFileSync(resultJsonPath, 'utf-8'));
+          } catch (e) {
+            console.debug('[whisperService] Final read resultJsonPath error:', e);
+          }
+        }
+      } finally {
+        await deleteTempFile(resultJsonPath);
       }
 
       if (jsonPayload && jsonPayload.success) {

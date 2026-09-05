@@ -147,11 +147,6 @@ export function useExportWorkflow({
 
       const customExportArgs: string[] = [];
 
-      if (cutRanges.length > 0) {
-        for (const cut of cutRanges) {
-          customExportArgs.push('--cut-out', `${cut.start}s,${cut.end}s`);
-        }
-      }
       if (audioTrackMode === 'mix') {
         customExportArgs.push('--mix-audio-streams');
       }
@@ -168,6 +163,7 @@ export function useExportWorkflow({
           openWhenDone,
           outputFolder: exportPath,
           outputFilePath: fullOut,
+          cutRanges: cutRanges.length > 0 ? cutRanges : undefined,
           customArgs: customExportArgs,
         });
 

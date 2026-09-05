@@ -9,28 +9,71 @@ import argparse
 import time
 import threading
 
-for v in ["3.9", "3.10", "3.11", "3.12", "3.13"]:
-    p = os.path.expanduser(f"~/Library/Python/{v}/lib/python/site-packages")
-    if os.path.exists(p) and p not in sys.path:
-        sys.path.insert(0, p)
+# Platform-aware environment and path setup
+if sys.platform == "win32":
+    local_app_data = os.environ.get("LOCALAPPDATA", "")
+    app_data = os.environ.get("APPDATA", "")
+    program_files = os.environ.get("ProgramFiles", r"C:\Program Files")
+    program_files_x86 = os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)")
 
-extra_paths = [
-    "/opt/homebrew/bin",
-    "/opt/homebrew/sbin",
-    "/usr/local/bin",
-    "/usr/bin",
-    "/bin",
-    "/usr/sbin",
-    "/sbin",
-    os.path.expanduser("~/.local/bin"),
-    os.path.expanduser("~/Library/Python/3.9/bin"),
-    os.path.expanduser("~/Library/Python/3.10/bin"),
-    os.path.expanduser("~/Library/Python/3.11/bin"),
-    os.path.expanduser("~/Library/Python/3.12/bin"),
-    os.path.expanduser("~/Library/Python/3.13/bin"),
-]
+    extra_paths = [
+        # WinGet links & packages (FFmpeg and CLI tools)
+        os.path.join(local_app_data, "Microsoft", "WinGet", "Links"),
+        os.path.join(local_app_data, "Microsoft", "WinGet", "Packages"),
+        # FFmpeg common install directories
+        r"C:\ffmpeg\bin",
+        os.path.join(program_files, "ffmpeg", "bin"),
+        os.path.join(program_files_x86, "ffmpeg", "bin"),
+        os.path.join(local_app_data, "ffmpeg", "bin"),
+        # Python Scripts directories
+        os.path.join(sys.prefix, "Scripts"),
+    ]
+
+    # Search for any ffmpeg.exe in WinGet Packages subdirectories
+    winget_pkg_dir = os.path.join(local_app_data, "Microsoft", "WinGet", "Packages")
+    if os.path.isdir(winget_pkg_dir):
+        try:
+            for entry in os.listdir(winget_pkg_dir):
+                if "ffmpeg" in entry.lower():
+                    pkg_path = os.path.join(winget_pkg_dir, entry)
+                    for root, dirs, files in os.walk(pkg_path):
+                        if "ffmpeg.exe" in (f.lower() for f in files):
+                            extra_paths.append(root)
+                            break
+        except Exception:
+            pass
+
+    # Add standard Windows Python Scripts directories
+    for ver in ["313", "312", "311", "310", "39"]:
+        extra_paths.append(os.path.join(local_app_data, "Programs", "Python", f"Python{ver}", "Scripts"))
+        extra_paths.append(os.path.join(app_data, "Python", f"Python{ver}", "Scripts"))
+else:
+    for v in ["3.9", "3.10", "3.11", "3.12", "3.13"]:
+        p = os.path.expanduser(f"~/Library/Python/{v}/lib/python/site-packages")
+        if os.path.exists(p) and p not in sys.path:
+            sys.path.insert(0, p)
+
+    extra_paths = [
+        "/opt/homebrew/bin",
+        "/opt/homebrew/sbin",
+        "/usr/local/bin",
+        "/usr/bin",
+        "/bin",
+        "/usr/sbin",
+        "/sbin",
+        os.path.expanduser("~/.local/bin"),
+        os.path.expanduser("~/Library/Python/3.9/bin"),
+        os.path.expanduser("~/Library/Python/3.10/bin"),
+        os.path.expanduser("~/Library/Python/3.11/bin"),
+        os.path.expanduser("~/Library/Python/3.12/bin"),
+        os.path.expanduser("~/Library/Python/3.13/bin"),
+    ]
+
+# Prepend valid extra paths using platform-correct separator
+valid_extra_paths = [p for p in extra_paths if p and os.path.isdir(p)]
 current_path = os.environ.get("PATH", "")
-os.environ["PATH"] = ":".join(extra_paths) + ":" + current_path
+if valid_extra_paths:
+    os.environ["PATH"] = os.pathsep.join(valid_extra_paths) + (os.pathsep + current_path if current_path else "")
 
 
 def report_progress(percent, message):
